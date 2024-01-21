@@ -47,7 +47,7 @@ stats <- stats %>% filter(!is.na(event_player_1_name))
 all_stats <- inner_join(stats, all_players, by = c("season", "event_player_1_name"="on_player", "play_num"))
 
 all_stats <- all_stats %>%
-  mutate(turnover = ifelse(event_type == "GIVEAWAY" | event_type == "TAKEAWAY", 1, 0), usage = ifelse(on_plays_pre == 0, 0, on_events_pre/on_plays_pre), score_diff = ifelse(side == "home", home_score - away_score, away_score - home_score), skater_diff = ifelse(side == "home", home_skaters - away_skaters, away_skaters - home_skaters)) %>%
+  mutate(turnover = ifelse(event_type == "TAKEAWAY", 1, 0), usage = ifelse(on_plays_pre == 0, 0, on_events_pre/on_plays_pre), score_diff = ifelse(side == "home", home_score - away_score, away_score - home_score), skater_diff = ifelse(side == "home", home_skaters - away_skaters, away_skaters - home_skaters)) %>%
   select(season, player = event_player_1_name, id = event_player_1_id, turnover, period, time = period_seconds_remaining, score_diff, skater_diff, x_fixed, y_fixed, usage)
 
 factor_data <- all_stats %>%
@@ -93,7 +93,7 @@ final_data <- cbind(final_data, t_predictions) %>%
 
 final <- final_data %>%
   group_by(season, player, id) %>%
-  summarize(events = n(), turnovers = sum(turnover), pred_turnovers = sum(pred_turnover), turnover_rate = turnovers/events, pred_turnover_rate = pred_turnovers/events, toe = turnover_rate - pred_turnover_rate)
+  summarize(events = n(), takeaways = sum(turnover), pred_takeaways = sum(pred_takeaway), takeaway_rate = takeaways/events, pred_takeaway_rate = pred_takeaways/events, toe = takeaway_rate - pred_takeaway_rate)
 
 stats_2024 <- final %>%
   filter(season == 2024) %>%
@@ -105,87 +105,4 @@ stats_2024 <- stats_2024 %>%
   mutate(headshot_link = paste0("http://nhl.bamcontent.com/images/headshots/current/168x168/", id, ".jpg")) %>%
   mutate(player = str_replace_all(player, "\\.", " "))
 
-stats_2024 %>%
-  ggplot(aes(x = turnover_rate, y = pred_turnover_rate)) +
-  geom_hline(yintercept = mean(stats_2024$pred_turnover_rate), color = "red", linetype = "dashed", alpha = 0.5) +
-  geom_vline(xintercept = mean(stats_2024$turnover_rate), color = "red", linetype = "dashed", alpha = 0.5) +
-  geom_from_path(aes(x = turnover_rate, y = pred_turnover_rate, path = headshot_link), width = 0.1, height = 0.1) +
-  geom_text_repel(aes(label=player), size = 2.5, box.padding = 1, point.padding = 1, max.overlaps = Inf) +
-  stat_poly_line() +
-  stat_poly_eq(use_label(c("eq", "R2"))) +
-  labs(x = "Turnover Rate",
-       y = "Predicted Turnover Rate",
-       title = "Predicting Turnover Rate and Quantifying TOE (Players In Top 50 Of Most Events)",
-       caption = "Amrit Vignesh") + 
-  theme_bw() +
-  theme(plot.title = element_text(size = 14, hjust = 0.5, face = "bold")) +
-  scale_y_continuous(breaks = scales::pretty_breaks(n = 20)) +
-  scale_x_continuous(breaks = scales::pretty_breaks(n = 20)) 
-
-gtdata <- stats_2024 %>%
-  ungroup() %>%
-  mutate(turnover_rate = round(turnover_rate, 4)) %>%
-  mutate(pred_turnover_rate = round(pred_turnover_rate, 4)) %>%
-  mutate(toe = round(toe, 4)) %>%
-  select(player, turnover_rate, pred_turnover_rate, toe) 
-
-table1 <- gtdata %>%
-  arrange(-toe) %>%
-  filter(row_number() <= 10) %>%
-  ungroup()
-
-table2 <- gtdata %>%
-  arrange(toe) %>%
-  filter(row_number() <= 10) %>%
-  ungroup()
-
-table1 %>% gt() %>% 
-  cols_align(
-    align = "center",
-    columns = c(player, turnover_rate, pred_turnover_rate, toe)
-  ) %>%
-  data_color(
-    columns = toe,
-    colors = scales::col_numeric(
-      palette = paletteer::paletteer_d(
-        palette = "ggsci::blue_material"
-      ) %>% as.character(),
-      domain = NULL
-    )
-  ) %>%
-  cols_label(
-    player = md("**Skater**"),
-    turnover_rate = md("**Turnover Rate**"),
-    pred_turnover_rate = md("**Pred. Turnover Rate**"),
-    toe = md("**TOE**"),
-  ) %>%
-  tab_header(
-    title = md("**2023-24 NHL Top 10 FGPOE (Turnover Rate Over Expected) Up Till 12/04**"),
-    subtitle = "Trained Data From 2021 to 2022-23 Season"
-  ) 
-
-table2 %>% gt() %>% 
-  cols_align(
-    align = "center",
-    columns = c(player, turnover_rate, pred_turnover_rate, toe)
-  ) %>%
-  data_color(
-    columns = toe,
-    colors = scales::col_numeric(
-      palette = paletteer::paletteer_d(
-        palette = "ggsci::blue_material"
-      ) %>% as.character(),
-      domain = NULL,
-      reverse = TRUE
-    )
-  ) %>%
-  cols_label(
-    player = md("**Skater**"),
-    turnover_rate = md("**Turnover Rate**"),
-    pred_turnover_rate = md("**Pred. Turnover Rate**"),
-    toe = md("**TOE**"),
-  ) %>%
-  tab_header(
-    title = md("**2023-24 NHL Bottom 10 TOE (Turnover Rate Over Expected) Up Till 12/04**"),
-    subtitle = "Trained Data From 2021 to 2022-23 Season"
-  ) 
+# no visualization code because this originally was turnover rate so all the code had to be fixed
